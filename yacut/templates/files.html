@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Загрузка файлов - YaCut{% endblock %}
+
+{% block content %}
+<section class="container my-5 px-4">
+    <h1 class="text-center">Загрузка файлов</h1>
+    <div class="container">
+        <div class="row my-3">
+            <div class="col-sm"></div>
+            <div class="col-sm">
+                <form method="POST" enctype="multipart/form-data" novalidate>
+                    {{ form.hidden_tag() }}
+                    <div>
+                        {{ form.files(class="form-control", multiple=True) }}
+                        {% for error in form.files.errors %}
+                            <p><span style="color:red">{{ error }}</span></p>
+                        {% endfor %}
+                    </div>
+                    {{ form.submit(class="btn btn-primary my-3") }}
+                </form>
+            </div>
+            <div class="col-sm"></div>
+        </div>
+    </div>
+    {% if results %}
+    <div class="container">
+        <div class="row">
+            <div class="col-sm"></div>
+            <div class="col-sm">
+                <h5 class="text-center">Загруженные файлы:</h5>
+                <ul>
+                {% for item in results %}
+                    <li>{{ item.filename }} - <a href="{{ item.short_url }}">{{ item.short_url }}</a></li>
+                {% endfor %}
+                </ul>
+            </div>
+            <div class="col-sm"></div>
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
