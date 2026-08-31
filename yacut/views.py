@@ -68,18 +68,18 @@ def redirect_view(short_id):
         except aiohttp.ClientError as e:
             abort(
                 500,
-                description=f'{ERROR_MESSAGES['download_error']}: {str(e)}'
+                description=f'{ERROR_MESSAGES["download_error"]}: {str(e)}'
             )
         except ValueError as e:
             abort(
                 500,
-                description=f'{ERROR_MESSAGES['download_link_error']}: '
+                description=f'{ERROR_MESSAGES["download_link_error"]}: '
                 f'{str(e)}'
             )
         except Exception as e:
             abort(
                 500,
-                description=f'{ERROR_MESSAGES['unknown_download_error']}: '
+                description=f'{ERROR_MESSAGES["unknown_download_error"]}: '
                 f'{str(e)}'
             )
 
@@ -116,12 +116,12 @@ def files_view():
         except aiohttp.ClientError as e:
             abort(
                 500,
-                description=f'{ERROR_MESSAGES['upload_error']}: {str(e)}'
+                description=f'{ERROR_MESSAGES["upload_error"]}: {str(e)}'
             )
         except Exception as e:
             abort(
                 500,
-                description=f'{ERROR_MESSAGES['unknown_upload_error']}: {e}'
+                description=f'{ERROR_MESSAGES["unknown_upload_error"]}: {e}'
             )
 
     return render_template('files.html', form=form, results=results)
