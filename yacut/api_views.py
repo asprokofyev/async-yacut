@@ -2,51 +2,55 @@ import re
 from flask import abort, request, jsonify
 from werkzeug.exceptions import BadRequest
 from yacut import app, db
+from yacut.constants import (
+    ERROR_MESSAGES, MAX_CUSTOM_SHORT_ID_LENGTH, RESERVED_NAMES, SHORT_ID_REGEX
+)
 from yacut.models import URLMap
 from yacut.utils import get_unique_short_id
 from http import HTTPStatus
 
 
-@app.route('/api/id/', methods=['POST'])
-def create_short_link():
+def validate_custom_id(custom_id: str) -> str:
+    custom_id = custom_id.strip()
+    if len(custom_id) > MAX_CUSTOM_SHORT_ID_LENGTH:
+        abort(400, description=ERROR_MESSAGES['invalid_short_id'])
+    if not re.match(SHORT_ID_REGEX, custom_id):
+        abort(400, description=ERROR_MESSAGES['invalid_short_id'])
+    if custom_id in RESERVED_NAMES:
+        abort(400, description=ERROR_MESSAGES['short_id_exists'])
+    if URLMap.query.filter_by(short=custom_id).first():
+        abort(400, description=ERROR_MESSAGES['short_id_exists'])
+    return custom_id
+
+
+def parse_request_data() -> dict:
     try:
         data = request.get_json()
     except BadRequest:
-        abort(400, description='Отсутствует тело запроса')
+        abort(400, description=ERROR_MESSAGES['missing_body'])
+    if data is None:
+        abort(400, description=ERROR_MESSAGES['missing_body'])
+    return data
+
+
+@app.route('/api/id/', methods=['POST'])
+def create_short_link():
+    data = parse_request_data()
+
     url = data.get('url')
     if not url:
-        abort(400, description='"url" является обязательным полем!')
-    custom_id = data.get('custom_id', '').strip()
+        abort(400, description=ERROR_MESSAGES['missing_url'])
+
+    custom_id = data.get('custom_id', '')
     if custom_id:
-        if len(custom_id) > 16:
-            abort(
-                400,
-                description='Указано недопустимое имя для короткой ссылки'
-            )
-        if not re.match(r'^[A-Za-z0-9]+$', custom_id):
-            abort(
-                400,
-                description='Указано недопустимое имя для короткой ссылки'
-            )
-        if custom_id == 'files':
-            abort(
-                400,
-                description='Предложенный вариант короткой ссылки '
-                'уже существует.'
-            )
-        if URLMap.query.filter_by(short=custom_id).first():
-            abort(
-                400,
-                description='Предложенный вариант короткой ссылки '
-                'уже существует.'
-            )
-        short = custom_id
+        short = validate_custom_id(custom_id)
     else:
         short = get_unique_short_id()
 
     url_map = URLMap(original=url, short=short)
     db.session.add(url_map)
     db.session.commit()
+
     short_link = f'{request.host_url}{short}'
     return jsonify({'url': url, 'short_link': short_link}), HTTPStatus.CREATED
 
@@ -55,5 +59,5 @@ def create_short_link():
 def get_original_link(short_id):
     url_map = URLMap.query.filter_by(short=short_id).first()
     if not url_map:
-        abort(404, description='Указанный id не найден')
+        abort(404, description=ERROR_MESSAGES['id_not_found'])
     return jsonify({'url': url_map.original}), HTTPStatus.OK

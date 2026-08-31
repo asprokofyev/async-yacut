@@ -4,6 +4,7 @@ import aiohttp
 from flask import abort, render_template, redirect, url_for, send_file
 import urllib
 from yacut import app, db
+from yacut.constants import ERROR_MESSAGES
 from yacut.forms import URLForm, FileForm
 from yacut.models import URLMap
 from yacut.utils import get_unique_short_id
@@ -33,14 +34,16 @@ def index_view():
 @app.route('/<short_id>')
 def redirect_view(short_id):
     url_map = URLMap.query.filter_by(short=short_id).first_or_404(
-        'Указанный id не найден'
+        ERROR_MESSAGES['id_not_found']
     )
     original = url_map.original
 
-    if 'downloader.disk.yandex.ru' in original or '/disk/' in original:
+    if original.startswith('/') or 'downloader.disk.yandex.ru' in original:
         try:
             if original.startswith('/'):
-                download_link = asyncio.run(get_download_link(original))
+                download_link, filename = asyncio.run(
+                    get_download_link(original)
+                )
             else:
                 download_link = original
                 parsed = urllib.parse.urlparse(download_link)
@@ -62,8 +65,23 @@ def redirect_view(short_id):
                 download_name=filename,
                 as_attachment=True
             )
+        except aiohttp.ClientError as e:
+            abort(
+                500,
+                description=f'{ERROR_MESSAGES['download_error']}: {str(e)}'
+            )
+        except ValueError as e:
+            abort(
+                500,
+                description=f'{ERROR_MESSAGES['download_link_error']}: '
+                f'{str(e)}'
+            )
         except Exception as e:
-            abort(500, description=f'Не удалось скачать файл: {str(e)}')
+            abort(
+                500,
+                description=f'{ERROR_MESSAGES['unknown_download_error']}: '
+                f'{str(e)}'
+            )
 
     return redirect(original)
 
@@ -76,15 +94,15 @@ def files_view():
         files = form.files.data
 
         if not files or all(f.filename == '' for f in files):
-            abort(400, description='Не выбрано ни одного файла')
+            abort(400, description=ERROR_MESSAGES['no_files_selected'])
 
         async def process_files():
             tasks = [upload_file_to_disk(file_storage=f) for f in files]
             download_info = await asyncio.gather(*tasks)
             res = []
-            for f, (link, display_name) in zip(files, download_info):
+            for f, (file_path, display_name) in zip(files, download_info):
                 short_id = get_unique_short_id()
-                url_map = URLMap(original=link, short=short_id)
+                url_map = URLMap(original=file_path, short=short_id)
                 db.session.add(url_map)
                 db.session.commit()
                 short_url = url_for(
@@ -92,6 +110,18 @@ def files_view():
                 )
                 res.append({'filename': display_name, 'short_url': short_url})
             return res
-        results = asyncio.run(process_files())
+
+        try:
+            results = asyncio.run(process_files())
+        except aiohttp.ClientError as e:
+            abort(
+                500,
+                description=f'{ERROR_MESSAGES['upload_error']}: {str(e)}'
+            )
+        except Exception as e:
+            abort(
+                500,
+                description=f'{ERROR_MESSAGES['unknown_upload_error']}: {e}'
+            )
 
     return render_template('files.html', form=form, results=results)

@@ -1,60 +1,110 @@
-### Как запустить проект Yacut:
+# YaCut - сервис укорачивания ссылок
 
-Клонировать репозиторий и перейти в него в командной строке:
+Сервис YaCut позволяет сокращать длинные ссылки, загружать файлы на Яндекс.Диск и получать короткие ссылки для скачивания.
 
-```
-git clone 
-```
 
-```
+## Как запустить проект Yacut
+
+### 1. Клонировать репозиторий и перейти в него
+
+```bash
+git clone <url-репозитория>
 cd yacut
 ```
 
-Cоздать и активировать виртуальное окружение:
+### 2. Создать и активировать виртуальное окружение
 
-```
+#### 🐧 Linux / macOS
+
+```bash
 python3 -m venv venv
+source venv/bin/activate
 ```
 
-* Если у вас Linux/macOS
+#### 🪟 Windows (CMD)
 
-    ```
-    source venv/bin/activate
-    ```
-
-* Если у вас windows
-
-    ```
-    source venv/scripts/activate
-    ```
-
-Установить зависимости из файла requirements.txt:
-
-```
-python3 -m pip install --upgrade pip
+```cmd
+python -m venv venv
+venv\Scripts\activate.bat
 ```
 
+#### 🪟 Windows (PowerShell)
+
+```powershell
+python -m venv venv
+venv\Scripts\Activate.ps1
 ```
+
+#### 🪟 Windows (Git Bash / MINGW64)
+
+```powershell
+python -m venv venv
+source venv/Scripts/activate
+```
+
+### 3. Установить зависимости
+
+#### Обновить pip (рекомендуется)
+
+```bash
+python -m pip install --upgrade pip
+```
+
+#### Установить все зависимости
+
+```bash
 pip install -r requirements.txt
 ```
 
-Создать в директории проекта файл .env с четыремя переменными окружения:
+### 4. Создать файл .env с переменными окружения
 
-```
+В корневой директории проекта создайте файл .env со следующим содержимым:
+Cоздать и активировать виртуальное окружение:
+
+```env
 FLASK_APP=yacut
 FLASK_ENV=development
-SECRET_KEY=your_secret_key
-DB=sqlite:///db.sqlite3
+SECRET_KEY=your_secret_key_here
+DATABASE_URI=sqlite:///db.sqlite3
+DISK_TOKEN=<ваш_токен_Яндекс_Диска>
 ```
 
-Создать базу данных и применить миграции:
+### 5. Создать базу данных и применить миграции
 
+#### Инициализировать папку миграций (если ещё не создана)
+
+```bash
+flask db init
 ```
+
+#### Создать миграцию (если модели изменились)
+
+```bash
+flask db migrate -m "initial"
+```
+
+#### Применить миграции к базе данных
+
+```bash
 flask db upgrade
 ```
 
-Запустить проект:
+Для Windows (если команда flask не распознаётся):
 
+```bash
+python -m flask db upgrade
 ```
+
+### 6. Запустить проект
+
+```bash
 flask run
+```
+
+После запуска сервер будет доступен по адресу: http://127.0.0.1:5000/
+
+Для Windows (альтернатива):
+
+```bash
+python -m flask run
 ```

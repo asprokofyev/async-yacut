@@ -7,34 +7,31 @@ from wtforms.validators import (  # type: ignore
     Length,
     ValidationError
 )
+from yacut.constants import (
+    ERROR_MESSAGES, MAX_CUSTOM_SHORT_ID_LENGTH, SHORT_ID_REGEX
+)
 from yacut.models import URLMap
 
 
 class URLForm(FlaskForm):
     original_link = StringField(
         'Длинная ссылка',
-        validators=[DataRequired(), URL()]
+        validators=[DataRequired('Обязательное поле'), URL()]
     )
     custom_id = StringField(
         'Ваш вариант короткой ссылки',
-        validators=[Length(max=16)]
+        validators=[Length(max=MAX_CUSTOM_SHORT_ID_LENGTH)]
     )
     submit = SubmitField('Создать')
 
     def validate_custom_id(self, field):
         if field.data:
-            if not re.match(r'^[A-Za-z0-9]+$', field.data):
-                raise ValidationError(
-                    'Указано недопустимое имя для короткой ссылки'
-                )
+            if not re.match(SHORT_ID_REGEX, field.data):
+                raise ValidationError(ERROR_MESSAGES['invalid_short_id'])
             if field.data == 'files':
-                raise ValidationError(
-                    'Предложенный вариант короткой ссылки уже существует.'
-                )
+                raise ValidationError(ERROR_MESSAGES['short_id_exists'])
             if URLMap.query.filter_by(short=field.data).first():
-                raise ValidationError(
-                    'Предложенный вариант короткой ссылки уже существует.'
-                )
+                raise ValidationError(ERROR_MESSAGES['short_id_exists'])
 
 
 class FileForm(FlaskForm):

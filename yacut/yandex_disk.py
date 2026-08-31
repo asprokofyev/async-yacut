@@ -1,21 +1,16 @@
 import urllib.parse
 import aiohttp  # type: ignore
 from yacut import app
+from yacut.constants import DOWNLOAD_LINK_URL, REQUEST_UPLOAD_URL, UPLOAD_DIR
 
-API_HOST = 'https://cloud-api.yandex.net/'
-API_VERSION = 'v1'
-REQUEST_UPLOAD_URL = f'{API_HOST}{API_VERSION}/disk/resources/upload'
-DOWNLOAD_LINK_URL = f'{API_HOST}{API_VERSION}/disk/resources/download'
+
 DISK_TOKEN = app.config['DISK_TOKEN']
-
-AUTH_HEADERS = {
-    'Authorization': f'OAuth {DISK_TOKEN}'
-}
+AUTH_HEADERS = {'Authorization': f'OAuth {DISK_TOKEN}'}
 
 
 async def get_upload_link(filename: str, overwrite: bool = True) -> str:
     params = {
-        'path': f'/{filename}',
+        'path': f'{UPLOAD_DIR}{filename}',
         'overwrite': str(overwrite).lower()
     }
     async with aiohttp.ClientSession() as session:
@@ -63,5 +58,7 @@ async def upload_file_to_disk(file_storage) -> tuple[str, str]:
     file_path = await upload_file_to_url(
         upload_url=upload_url, file_data=file_data
     )
-    download_link, _ = await get_download_link(file_path)
-    return download_link, file_storage.filename
+
+    await get_download_link(file_path)
+
+    return file_path, file_storage.filename
